@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Nifty Straddle P&L</title>
+    <script>
+        function fetchPnl() {
+            fetch('/pnl')
+                .then(response => response.json())
+                .then(data => {
+                    let pnlDiv = document.getElementById('pnl');
+                    if (data.error) {
+                        pnlDiv.innerHTML = `<p>${data.error}</p>`;
+                        return;
+                    }
+
+                    let content = `<h2>Total P&L: ${data.total_pnl}</h2>`;
+                    content += '<table>';
+                    content += '<tr><th>Symbol</th><th>Buy Price</th><th>LTP</th><th>P&L</th></tr>';
+                    data.positions.forEach(position => {
+                        content += `<tr>`;
+                        content += `<td>${position.symbol}</td>`;
+                        content += `<td>${position.buy_price}</td>`;
+                        content += `<td>${position.ltp}</td>`;
+                        content += `<td>${position.pnl}</td>`;
+                        content += `</tr>`;
+                    });
+                    content += '</table>';
+                    pnlDiv.innerHTML = content;
+                });
+        }
+        setInterval(fetchPnl, 5000); // Update every 5 seconds
+    </script>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body onload="fetchPnl()">
+    <h1>Nifty Straddle P&L</h1>
+    <div id="pnl">
+        <p>Loading P&L data...</p>
+    </div>
+</body>
+</html>
