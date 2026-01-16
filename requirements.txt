@@ -2,3 +2,4 @@ dhanhq
 Flask
 holidays
 schedule
+pandas
