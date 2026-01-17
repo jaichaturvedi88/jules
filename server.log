@@ -1,10 +1,9 @@
-Scheduler started. Waiting for the scheduled job to run at 15:45 on weekdays.
+Running the strategy at 9:15 AM...
+Please update your Dhan API credentials in config.ini
  * Serving Flask app 'main'
+Scheduler started. Waiting for the scheduled job to run.
  * Debug mode: on
 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
  * Running on http://127.0.0.1:5000
 [33mPress CTRL+C to quit[0m
-127.0.0.1 - - [16/Jan/2026 19:59:40] "GET /pnl-history HTTP/1.1" 200 -
-/app/main.py:32: FutureWarning: DataFrameGroupBy.apply operated on the grouping columns. This behavior is deprecated, and in a future version of pandas the grouping columns will be excluded from the operation. Either pass `include_groups=False` to exclude the groupings or explicitly select the grouping columns after groupby to silence this warning.
-  pnl_by_expiry = df_reset.groupby('expiry_date').apply(lambda x: x.drop(columns='expiry_date').to_dict(orient='records')).to_dict()
-127.0.0.1 - - [16/Jan/2026 19:59:40] "GET /api/pnl-data HTTP/1.1" 200 -
+127.0.0.1 - - [16/Jan/2026 14:30:22] "GET / HTTP/1.1" 200 -
