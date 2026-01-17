@@ -29,7 +29,10 @@ def get_pnl_data():
         df_reset = df_reset.where(pd.notna(df_reset), None)
 
         # Group by expiry_date
-        pnl_by_expiry = df_reset.groupby('expiry_date').apply(lambda x: x.drop(columns='expiry_date').to_dict(orient='records'), include_groups=False).to_dict()
+        pnl_by_expiry = {}
+        for name, group in df_reset.groupby('expiry_date'):
+            group_data = group.drop(columns='expiry_date').to_dict(orient='records')
+            pnl_by_expiry[name] = group_data
 
         return jsonify(pnl_by_expiry)
     except Exception as e:
