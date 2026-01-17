@@ -12,6 +12,9 @@ app = Flask(__name__)
 def index():
     return render_template('index.html')
 
+@app.route('/pnl-history')
+def pnl_history():
+    return render_template('pnl_history.html')
 
 @app.route('/api/pnl-data')
 def get_pnl_data():
