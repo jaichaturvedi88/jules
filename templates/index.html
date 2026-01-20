@@ -1,54 +1,180 @@
+
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Nifty Straddle P&L</title>
-    <script>
-        function fetchPnl() {
-            fetch('/pnl')
-                .then(response => response.json())
-                .then(data => {
-                    let pnlDiv = document.getElementById('pnl');
-                    if (data.error) {
-                        pnlDiv.innerHTML = `<p>${data.error}</p>`;
-                        return;
-                    }
-
-                    let content = `<h2>Total P&L: ${data.total_pnl}</h2>`;
-                    content += '<table>';
-                    content += '<tr><th>Symbol</th><th>Buy Price</th><th>LTP</th><th>P&L</th></tr>';
-                    data.positions.forEach(position => {
-                        content += `<tr>`;
-                        content += `<td>${position.symbol}</td>`;
-                        content += `<td>${position.buy_price}</td>`;
-                        content += `<td>${position.ltp}</td>`;
-                        content += `<td>${position.pnl}</td>`;
-                        content += `</tr>`;
-                    });
-                    content += '</table>';
-                    pnlDiv.innerHTML = content;
-                });
-        }
-        setInterval(fetchPnl, 5000); // Update every 5 seconds
-    </script>
+    <title>P&L History</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
+        body { font-family: sans-serif; padding: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        td.profit { color: green; }
+        td.loss { color: red; }
     </style>
 </head>
-<body onload="fetchPnl()">
-    <h1>Nifty Straddle P&L</h1>
-    <div id="pnl">
-        <p>Loading P&L data...</p>
+<body>
+
+<div class="container mt-4">
+    <h1>P&L History</h1>
+
+    <!-- Nav tabs -->
+    <ul class="nav nav-tabs" id="pnlTabs" role="tablist">
+        <!-- Tabs will be inserted dynamically here -->
+    </ul>
+
+    <!-- Tab panes -->
+    <div class="tab-content" id="pnlTabContent">
+        <!-- Tab content will be inserted dynamically here -->
     </div>
+</div>
+
+<!-- Bootstrap JS Bundle -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    fetch('/api/pnl-data')
+        .then(response => {
+            if (response.status === 400) {
+                return response.json().then(err => Promise.reject(err));
+            }
+            return response.text();
+        })
+        .then(text => {
+            const cleanText = text.replace(/NaN/g, 'null');
+            const data = JSON.parse(cleanText);
+
+            const tabsContainer = document.getElementById('pnlTabs');
+            const tabContentContainer = document.getElementById('pnlTabContent');
+            let isFirstTab = true;
+
+            for (const expiryDate in data) {
+                const trades = data[expiryDate];
+                const expiryDateObj = new Date(expiryDate);
+                const monthYear = expiryDateObj.toLocaleString('default', { month: 'long', year: 'numeric' });
+                const tabId = `tab-${expiryDate.replace(/[^a-zA-Z0-9]/g, '')}`;
+                const paneId = `pane-${expiryDate.replace(/[^a-zA-Z0-9]/g, '')}`;
+
+                // --- Create Tab Button ---
+                const tabLi = document.createElement('li');
+                tabLi.className = 'nav-item';
+                tabLi.setAttribute('role', 'presentation');
+
+                const tabButton = document.createElement('button');
+                tabButton.className = `nav-link ${isFirstTab ? 'active' : ''}`;
+                tabButton.id = tabId;
+                tabButton.setAttribute('data-bs-toggle', 'tab');
+                tabButton.setAttribute('data-bs-target', `#${paneId}`);
+                tabButton.type = 'button';
+                tabButton.setAttribute('role', 'tab');
+                tabButton.setAttribute('aria-controls', paneId);
+                tabButton.setAttribute('aria-selected', isFirstTab ? 'true' : 'false');
+                tabButton.textContent = monthYear;
+
+                tabLi.appendChild(tabButton);
+                tabsContainer.appendChild(tabLi);
+
+                // --- Create Tab Pane ---
+                const tabPane = document.createElement('div');
+                tabPane.className = `tab-pane fade ${isFirstTab ? 'show active' : ''}`;
+                tabPane.id = paneId;
+                tabPane.setAttribute('role', 'tabpanel');
+                tabPane.setAttribute('aria-labelledby', tabId);
+
+                const table = document.createElement('table');
+                table.className = 'table table-bordered table-striped mt-3';
+                const thead = document.createElement('thead');
+                const tbody = document.createElement('tbody');
+
+                // --- Determine which P&L date columns to show ---
+                let allPnlDates = new Set();
+                trades.forEach(trade => {
+                    Object.keys(trade).forEach(key => {
+                        if (!['expiry_date', 'trade_date', 'strike_price', 'buy_price', 'call_id', 'put_id'].includes(key)) {
+                            allPnlDates.add(key);
+                        }
+                    });
+                });
+
+                const sortedPnlDates = Array.from(allPnlDates).sort();
+                // Filter out columns that are empty for all trades
+                const populatedPnlDates = sortedPnlDates.filter(date =>
+                    trades.some(trade => trade[date] !== null && trade[date] !== undefined)
+                );
+
+                // --- Table Header ---
+                const headerRow = document.createElement('tr');
+                ['Trade Date', 'Strike', 'BUY PRICE'].forEach(text => {
+                    const th = document.createElement('th');
+                    th.textContent = text;
+                    headerRow.appendChild(th);
+                });
+
+                populatedPnlDates.forEach(date => {
+                    const th = document.createElement('th');
+                    th.textContent = new Date(date).getDate().toString().padStart(2, '0');
+                    headerRow.appendChild(th);
+                });
+                thead.appendChild(headerRow);
+
+                // --- Table Body ---
+                trades.forEach(trade => {
+                    const tr = document.createElement('tr');
+
+                    const tradeDateCell = document.createElement('td');
+                    tradeDateCell.textContent = new Date(trade.trade_date).getDate().toString().padStart(2, '0');
+                    tr.appendChild(tradeDateCell);
+
+                    const strikeCell = document.createElement('td');
+                    strikeCell.textContent = trade.strike_price;
+                    tr.appendChild(strikeCell);
+
+                    const buyPriceCell = document.createElement('td');
+                    buyPriceCell.textContent = trade.buy_price !== null ? trade.buy_price.toFixed(2) : 'N/A';
+                    tr.appendChild(buyPriceCell);
+
+                    populatedPnlDates.forEach(pnlDate => {
+                        const pnlCell = document.createElement('td');
+                        const pnlValue = trade[pnlDate];
+
+                        if (pnlValue !== undefined && pnlValue !== null) {
+                            pnlCell.textContent = pnlValue;
+                            pnlCell.className = pnlValue >= 0 ? 'profit' : 'loss';
+                        } else {
+                            pnlCell.textContent = '';
+                        }
+                        tr.appendChild(pnlCell);
+                    });
+                    tbody.appendChild(tr);
+                });
+
+                table.appendChild(thead);
+                table.appendChild(tbody);
+                tabPane.appendChild(table);
+                tabContentContainer.appendChild(tabPane);
+
+                isFirstTab = false;
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching P&L data:', error);
+            const container = document.querySelector('.container.mt-4');
+            if (error.error === 'credentials_not_configured') {
+                container.innerHTML = `
+                    <div class="alert alert-danger" role="alert">
+                        <h4 class="alert-heading">Configuration Required!</h4>
+                        <p>Your DhanHQ API credentials are not configured. Please update the <code>config.ini</code> file with your <code>client_id</code> and <code>access_token</code>.</p>
+                        <hr>
+                        <p class="mb-0">Once you have updated the credentials, please restart the application.</p>
+                    </div>
+                `;
+            } else {
+                 container.innerHTML = '<div class="alert alert-danger" role="alert">An unexpected error occurred while fetching P&L data.</div>';
+            }
+        });
+});
+</script>
+
 </body>
 </html>
