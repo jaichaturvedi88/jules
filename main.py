@@ -21,7 +21,6 @@ def are_credentials_configured():
 def index():
     return render_template('index.html')
 
-
 @app.route('/api/pnl-data')
 def get_pnl_data():
     if not are_credentials_configured():
